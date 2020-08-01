@@ -22,48 +22,58 @@ namespace First
     public partial class MainWindow : Window
     {
         private int index { get; set; } = 0;
-        private string newAns { get; set; } = "";
 
 
         public MainWindow()
         {
             InitializeComponent();
-            
+            string kanjiAns = getNext("");
+            kanjiLabel.Content = kanjiAns.Split(';')[0];
+            displayButton.IsEnabled = true;
+            Next.IsEnabled = false;
+            Again.IsEnabled = false;
         }
 
 
-
-        private void displayButton_Click(object sender, RoutedEventArgs e)
+        public string getNext(string ansType)
         {
             string stm = string.Format("SELECT * FROM Items LIMIT 1 OFFSET {0}", index);
             Item item = new Item();
             KeyValuePair<string, string> kanjiAns = item.ReadData(stm);
-            kanjiLabel.Content = kanjiAns.Key;
-            textBox1.Text = kanjiAns.Value;
-            if (textBox1.Text.Length == 0)
+            if(ansType == "k")
             {
-                textBox1.IsReadOnly = false;
+                return kanjiAns.Key;
+            }
+            else if (ansType == "a")
+            {
+                return kanjiAns.Value;
             }
             else
             {
-                textBox1.IsReadOnly = true;
+                return string.Format("{0};{1}", kanjiAns.Key, kanjiAns.Value);
             }
-            newAns = "";
+        }
+
+        private void displayButton_Click(object sender, RoutedEventArgs e)
+        {
+            string ans = getNext("a");
+            answerText.Text = ans;
+            displayButton.IsEnabled = false;
+            Next.IsEnabled = true;
+            Again.IsEnabled = true;
+            index++;
             //superMemo();
-            //textBox1.Text = kanji.Substring(1,1);
+            //answerText.Text = kanji.Substring(1,1);
         }
 
         private void nextButton_Click(object sender, RoutedEventArgs e)
         {
-            string stm = string.Format("SELECT * FROM Items LIMIT 1 OFFSET {0}", index);
-            Item item = new Item();
-            KeyValuePair<string, string> kanjiAns = item.ReadData(stm);
-            if (newAns.Length > 0)
-            {
-                item.InsertAnswer(kanjiAns.Key, newAns);
-            }
-            newAns = "";
-            index++;
+            string kanji = getNext("k");
+            kanjiLabel.Content = kanji;
+            displayButton.IsEnabled = true;
+            Next.IsEnabled = false;
+            Again.IsEnabled = false;
+            answerText.Text = "";
         }
 
         private void againButton_Click(object sender, RoutedEventArgs e)
@@ -80,11 +90,6 @@ namespace First
 
 
             //item.easiness += 0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02);
-        }
-
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            newAns = textBox1.Text;
         }
     }
 
