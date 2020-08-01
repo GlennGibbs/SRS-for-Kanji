@@ -3,6 +3,7 @@
 // See the blog post here for help on using the generated code: http://erikej.blogspot.dk/2014/10/database-first-with-sqlite-in-universal.html
 using System.Data.SQLite;
 using System;
+using System.Collections.Generic;
 
 namespace First
 {
@@ -22,6 +23,7 @@ namespace First
                 try
                 {
                     db.Open();
+                    db.Close();
                 }
                 catch (Exception ex)
                 {
@@ -30,17 +32,23 @@ namespace First
             }
         }
 
-        public string ReadData(string stm)
+        public KeyValuePair<string, string> ReadData(string stm)
         {
             using (SQLiteConnection db = new SQLiteConnection(_path))
             {
                 db.Open();
-                SQLiteCommand sqlite_cmd = db.CreateCommand();
-                sqlite_cmd.CommandText = stm;
-                SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader();
-                dataReader.Read();
-                string kanji = dataReader.GetString(0);
-                return kanji;
+                using (SQLiteCommand sqlite_cmd = db.CreateCommand())
+                {
+                    sqlite_cmd.CommandText = stm;
+                    using (SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader())
+                    {
+                        dataReader.Read();
+                        string kanji = dataReader.GetString(0);
+                        string ans = dataReader.GetString(4);
+                        KeyValuePair<string, string> kanjiAns = new KeyValuePair<string, string>(kanji, ans);
+                        return kanjiAns;
+                    }
+                }
             }
         }
 
@@ -49,11 +57,29 @@ namespace First
             using (SQLiteConnection db = new SQLiteConnection(_path))
             {
                 db.Open();
-                SQLiteCommand sqlite_cmd = db.CreateCommand();
-                sqlite_cmd.CommandText = string.Format("INSERT INTO Items (kanji, repetition, easiness, interval, answer) VALUES(\"{0}\",0,0.0,0,\"{1}\"); ", kanji, answer);
-                sqlite_cmd.ExecuteNonQuery();
+                using (SQLiteCommand sqlite_cmd = db.CreateCommand())
+                {
+                    sqlite_cmd.CommandText = string.Format("INSERT INTO Items (kanji, repetition, easiness, interval, answer) VALUES(\"{0}\",0,0.0,0,\"{1}\"); ", kanji, answer);
+                    sqlite_cmd.ExecuteNonQuery();
+                }
             }
             
+        }
+
+        public void InsertAnswer(string kanji, string ans)
+        {
+            using (SQLiteConnection db = new SQLiteConnection(_path))
+            {
+                db.Open();
+                using (SQLiteCommand sqlite_cmd = db.CreateCommand())
+                {
+                    sqlite_cmd.CommandText = "UPDATE Items SET answer = @ans WHERE kanji = @kanji";
+                    sqlite_cmd.Parameters.AddWithValue("@ans", ans);
+                    sqlite_cmd.Parameters.AddWithValue("@kanji", kanji);
+                    sqlite_cmd.ExecuteNonQuery();
+                }
+            }
+
         }
     }
 
