@@ -4,6 +4,7 @@
 using System.Data.SQLite;
 using System;
 using System.Collections.Generic;
+using System.Windows.Controls;
 
 namespace First
 {
@@ -31,15 +32,40 @@ namespace First
                 }
             }
         }
-
-        public Data ReadRow(string stm)
+        public int LearntCount ()
+        {
+            int rowCount = 0;
+            using (SQLiteConnection db = new SQLiteConnection(_path))
+            {
+                db.Open();
+                using (SQLiteCommand sqlite_cmd = db.CreateCommand())
+                {
+                    
+                    sqlite_cmd.CommandText = "SELECT Learnt FROM Items WHERE Learnt != \"false\" ORDER BY Learnt DESC";
+                    using (SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader())
+                    {
+                        while (dataReader.HasRows)
+                        {
+                            dataReader.Read();
+                            if (dataReader.GetString(6).Equals(DateTime.Today.ToString().Replace(" 00:00:00", "")))
+                            {
+                                rowCount++;
+                            }   
+                        }
+                        return rowCount;
+                    }
+                }
+            }
+        }
+        public Data ReadRow(int index, string stm = "")
         {
             using (SQLiteConnection db = new SQLiteConnection(_path))
             {
                 db.Open();
                 using (SQLiteCommand sqlite_cmd = db.CreateCommand())
                 {
-                    sqlite_cmd.CommandText = stm;
+                    sqlite_cmd.CommandText = "SELECT * FROM Items LIMIT 1 OFFSET @index";
+                    sqlite_cmd.Parameters.AddWithValue("@index", index);
                     using (SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader())
                     {
                         dataReader.Read();
@@ -80,7 +106,7 @@ namespace First
                     }
                     if (stm.Contains("@learnt"))
                     {
-                        sqlite_cmd.Parameters.AddWithValue("@date", date);
+                        sqlite_cmd.Parameters.AddWithValue("@learnt", learnt);
                     }
                     sqlite_cmd.Parameters.AddWithValue("@kanji", kanji);
                     sqlite_cmd.ExecuteNonQuery();

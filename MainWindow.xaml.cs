@@ -24,22 +24,38 @@ namespace First
         private int index { get; set; } = 0;
         private ItemDb item = new ItemDb(@"URI=file:C:\Users\Glenn\source\repos\First\SRS_items.db");
 
-
         public MainWindow()
         {
             InitializeComponent();
-            Data data = getNext();
-            kanjiLabel.Content = data.kanji;
-            displayButton.IsEnabled = true;
-            Next.IsEnabled = false;
-            Again.IsEnabled = false;
+            if(!kanjiCount())
+            {
+                Data data = getNext();
+                kanjiLabel.Content = data.kanji;
+                displayButton.IsEnabled = true;
+                Next.IsEnabled = false;
+                Again.IsEnabled = false;
+            }
         }
 
-
+        public bool kanjiCount()
+        {
+            if(item.LearntCount() >= 30)
+            {
+                answerText.Text = "You have learnt all the new kanji today.";
+                kanjiLabel.Content = "";
+                displayButton.IsEnabled = false;
+                Next.IsEnabled = false;
+                Again.IsEnabled = false;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
         public Data getNext()
         {
-            string stm = string.Format("SELECT * FROM Items LIMIT 1 OFFSET {0}", index);
-            Data itemData = item.ReadRow(stm);
+            Data itemData = item.ReadRow(index);
             return itemData;
         }
 
@@ -60,8 +76,11 @@ namespace First
             answerText.Text = "";
             superMemo(5);
             index++;
-            Data data = getNext();
-            kanjiLabel.Content = data.kanji;
+            if (!kanjiCount())
+            {
+                Data data = getNext();
+                kanjiLabel.Content = data.kanji;
+            }
         }
 
         private void againButton_Click(object sender, RoutedEventArgs e)
@@ -72,14 +91,26 @@ namespace First
             answerText.Text = "";
             superMemo(1);
             index++;
-            Data data = getNext();
-            kanjiLabel.Content = data.kanji;
+            if (!kanjiCount())
+            {
+                Data data = getNext();
+                kanjiLabel.Content = data.kanji;
+            }
         }
+        private void reviewKanji()
+        {
 
+        }
+        private void newKanji()
+        {
+            if (!kanjiCount())
+            {
+
+            }
+        }
         private void superMemo(int grade)
         {
-            string stm = string.Format("SELECT * FROM Items LIMIT 1 OFFSET {0}", index);
-            Data itemData = item.ReadRow(stm);
+            Data itemData = item.ReadRow(index);
             double newEasiness = itemData.easiness + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
             itemData.easiness = newEasiness > 1.3 ? newEasiness : 1.3;
             if (grade == 5)
