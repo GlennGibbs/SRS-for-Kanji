@@ -7,10 +7,10 @@ using System.Collections.Generic;
 
 namespace First
 {
-    public class SQLiteDb
+    public class ItemDb
     {
-        public string _path { get; set; }
-        public SQLiteDb(string path)
+        public string _path { get; set; } 
+        public ItemDb(string path)
         {
             _path = path;
             Connect();
@@ -32,7 +32,7 @@ namespace First
             }
         }
 
-        public KeyValuePair<string, string> ReadData(string stm)
+        public Data ReadRow(string stm)
         {
             using (SQLiteConnection db = new SQLiteConnection(_path))
             {
@@ -43,56 +43,74 @@ namespace First
                     using (SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader())
                     {
                         dataReader.Read();
-                        string kanji = dataReader.GetString(0);
-                        string ans = dataReader.GetString(4);
-                        KeyValuePair<string, string> kanjiAns = new KeyValuePair<string, string>(kanji, ans);
-                        return kanjiAns;
+                        Data data = new Data(dataReader.GetString(0), dataReader.GetInt32(1), dataReader.GetDouble(2),
+                            dataReader.GetInt32(3), dataReader.GetString(4), dataReader.GetString(5), dataReader.GetString(6));
+                        return data;
                     }
                 }
             }
         }
 
-        public void InsertData(string kanji, string answer = "")
+        public void InsertAnswer(string kanji, string stm, int rep = 0, double easiness = 0.0, int interval = 0, string ans = "", string date = "", string learnt = "")
         {
             using (SQLiteConnection db = new SQLiteConnection(_path))
             {
                 db.Open();
                 using (SQLiteCommand sqlite_cmd = db.CreateCommand())
                 {
-                    sqlite_cmd.CommandText = string.Format("INSERT INTO Items (kanji, repetition, easiness, interval, answer) VALUES(\"{0}\",0,0.0,0,\"{1}\"); ", kanji, answer);
-                    sqlite_cmd.ExecuteNonQuery();
-                }
-            }
-            
-        }
-
-        public void InsertAnswer(string kanji, string ans)
-        {
-            using (SQLiteConnection db = new SQLiteConnection(_path))
-            {
-                db.Open();
-                using (SQLiteCommand sqlite_cmd = db.CreateCommand())
-                {
-                    sqlite_cmd.CommandText = "UPDATE Items SET answer = @ans WHERE kanji = @kanji";
-                    sqlite_cmd.Parameters.AddWithValue("@ans", ans);
+                    sqlite_cmd.CommandText = stm;
+                    if (stm.Contains("@ans"))
+                    {
+                        sqlite_cmd.Parameters.AddWithValue("@ans", ans);
+                    }
+                    if (stm.Contains("@repetition")){
+                        sqlite_cmd.Parameters.AddWithValue("@repetition", rep);
+                    }
+                    if(stm.Contains("@easiness"))
+                    {
+                        sqlite_cmd.Parameters.AddWithValue("@easiness", easiness);
+                    }
+                    if(stm.Contains("@interval"))
+                    {
+                        sqlite_cmd.Parameters.AddWithValue("@interval", interval);
+                    }
+                    if (stm.Contains("@date"))
+                    {
+                        sqlite_cmd.Parameters.AddWithValue("@date", date);
+                    }
+                    if (stm.Contains("@learnt"))
+                    {
+                        sqlite_cmd.Parameters.AddWithValue("@date", date);
+                    }
                     sqlite_cmd.Parameters.AddWithValue("@kanji", kanji);
                     sqlite_cmd.ExecuteNonQuery();
                 }
             }
 
         }
+
     }
 
-    public partial class Items
+    public struct Data
     {
-        public String kanji { get; set; }
-        
-        public Int64 repition { get; set; }
-        
-        public Double easiness { get; set; }
-        
-        public Int64 interval { get; set; }
-        
+        public Data (string K, int R, double E, int I, string A, string D, string L)
+        {
+            kanji = K;
+            ans = A;
+            repetition = R;
+            easiness = E;
+            interval = I;
+            date = D;
+            learnt = L;
+        }
+
+        public string kanji { get; set; }
+        public string ans { get; set; }
+        public int repetition { get; set; }
+        public double easiness { get; set; }
+        public int interval { get; set; }
+        public string date { get; set; }
+        public string learnt { get; set; }
     }
     
 }
