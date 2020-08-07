@@ -32,7 +32,7 @@ namespace First
                 }
             }
         }
-        public int LearntCount ()
+        public int LearntCount (bool newKanji)
         {
             int rowCount = 0;
             using (SQLiteConnection db = new SQLiteConnection(_path))
@@ -41,16 +41,19 @@ namespace First
                 using (SQLiteCommand sqlite_cmd = db.CreateCommand())
                 {
                     
-                    sqlite_cmd.CommandText = "SELECT Learnt FROM Items WHERE Learnt != \"false\" ORDER BY Learnt DESC";
+                    sqlite_cmd.CommandText = "SELECT * FROM Items WHERE Learnt != \"false\" ORDER BY Learnt DESC";
                     using (SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader())
-                    {
-                        while (dataReader.HasRows)
+                    { 
+
+                        if(dataReader != null && dataReader.HasRows)
                         {
-                            dataReader.Read();
-                            if (dataReader.GetString(6).Equals(DateTime.Today.ToString().Replace(" 00:00:00", "")))
+                            while (dataReader.Read())
                             {
-                                rowCount++;
-                            }   
+                                if (dataReader.GetString(6).Equals(DateTime.Today.ToString().Replace(" 00:00:00", "")))
+                                {
+                                    rowCount++;
+                                }    
+                            }
                         }
                         return rowCount;
                     }
@@ -64,13 +67,20 @@ namespace First
                 db.Open();
                 using (SQLiteCommand sqlite_cmd = db.CreateCommand())
                 {
-                    sqlite_cmd.CommandText = "SELECT * FROM Items LIMIT 1 OFFSET @index";
-                    sqlite_cmd.Parameters.AddWithValue("@index", index);
+                    if (stm == "")
+                    {
+                        sqlite_cmd.CommandText = "SELECT * FROM Items WHERE Id = @index";
+                        sqlite_cmd.Parameters.AddWithValue("index", index);
+                    }
+                    else
+                    {
+                        sqlite_cmd.CommandText = stm;
+                    }
                     using (SQLiteDataReader dataReader = sqlite_cmd.ExecuteReader())
                     {
                         dataReader.Read();
-                        Data data = new Data(dataReader.GetString(0), dataReader.GetInt32(1), dataReader.GetDouble(2),
-                            dataReader.GetInt32(3), dataReader.GetString(4), dataReader.GetString(5), dataReader.GetString(6));
+                        Data data = new Data(dataReader.GetInt32(0), dataReader.GetString(1), dataReader.GetInt32(2), dataReader.GetDouble(3),
+                            dataReader.GetInt32(4), dataReader.GetString(5), dataReader.GetString(6), dataReader.GetString(7));
                         return data;
                     }
                 }
@@ -119,8 +129,9 @@ namespace First
 
     public struct Data
     {
-        public Data (string K, int R, double E, int I, string A, string D, string L)
+        public Data (int id, string K, int R, double E, int I, string A, string D, string L)
         {
+            index = id;
             kanji = K;
             ans = A;
             repetition = R;
@@ -130,6 +141,7 @@ namespace First
             learnt = L;
         }
 
+        public int index { get; }
         public string kanji { get; set; }
         public string ans { get; set; }
         public int repetition { get; set; }
