@@ -1,20 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Data.SQLite;
+using System.IO;
+using Path = System.IO.Path;
 
-namespace First
+namespace KanjiSRS
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -22,50 +11,37 @@ namespace First
     public partial class MainWindow : Window
     {
         private int index { get; set; } = 0;
-        private ItemDb item = new ItemDb(@"URI=file:C:\Users\Glenn\Documents\GitHub\C# repos\SRS-for-Kanji\SRS_items.db");
+        private ItemDb item = new ItemDb("URI=file:" + Path.Combine(Directory.GetCurrentDirectory(), @"SRS_Items.db"));
+        private int reviewOffset { get; set; } = 0;
 
         public MainWindow()
-        {
+        { 
             InitializeComponent();
-            if(!kanjiCount())
+            checkKanji();
+        }
+        private void checkKanji()
+        {
+            if (newKanji() || reviewKanji())
             {
-                Data data = newKanji();
+                Data data = item.ReadRow(index);
                 kanjiLabel.Content = data.kanji;
+                answerText.Text = "";
                 displayButton.IsEnabled = true;
                 Next.IsEnabled = false;
                 Again.IsEnabled = false;
             }
             else
             {
-                // Review kanji instead.
-            }
-        }
-
-        public bool kanjiCount()
-        {
-            if(item.LearntCount(true) >= 30)
-            {
-                answerText.Text = "You have learnt all the new kanji today.";
+                answerText.Text = "You have finished your new and old kanji reviews for today.";
                 kanjiLabel.Content = "";
                 displayButton.IsEnabled = false;
                 Next.IsEnabled = false;
                 Again.IsEnabled = false;
-                return true;
-            }
-            else
-            {
-                return false;
             }
         }
-        public Data getNext()
-        {
-            Data itemData = item.ReadRow(index);
-            return itemData;
-        }
-
         private void displayButton_Click(object sender, RoutedEventArgs e)
         {
-            Data data = getNext();
+            Data data = item.ReadRow(index);
             answerText.Text = data.ans;
             displayButton.IsEnabled = false;
             Next.IsEnabled = true;
@@ -74,42 +50,39 @@ namespace First
 
         private void nextButton_Click(object sender, RoutedEventArgs e)
         {
-            displayButton.IsEnabled = true;
-            Next.IsEnabled = false;
-            Again.IsEnabled = false;
-            answerText.Text = "";
             superMemo(5);
-            index++;
-            if (!kanjiCount())
-            {
-                Data data = getNext();
-                kanjiLabel.Content = data.kanji;
-            }
+            checkKanji();
         }
 
         private void againButton_Click(object sender, RoutedEventArgs e)
         {
-            displayButton.IsEnabled = true;
-            Next.IsEnabled = false;
-            Again.IsEnabled = false;
-            answerText.Text = "";
             superMemo(1);
-            index++;
-            if (!kanjiCount())
+            checkKanji();
+        }
+        private bool reviewKanji()
+        {
+            for (; item.RowCount(false, reviewOffset) > 0; reviewOffset++)
             {
-                Data data = getNext();
-                kanjiLabel.Content = data.kanji;
+                Data data = item.ReadRow(0, "SELECT * FROM Items WHERE LastDate != \"false\" LIMIT 1 OFFSET @offset", reviewOffset);
+                DateTime date = DateTime.Parse(data.date);
+                if (date.AddDays(data.interval) <= DateTime.Today)
+                {
+                    index = data.index;
+                    return true;
+                }
             }
+            return false;
         }
-        private void reviewKanji()
+        private bool newKanji()
         {
-
-        }
-        private Data newKanji()
-        {
-            Data data = item.ReadRow(0, "SELECT * FROM Items WHERE Learnt = \"false\" LIMIT 1");
-            index = data.index;
-            return data;
+            if(item.RowCount(true) < 30)
+            {
+                Data data = item.ReadRow(0, "SELECT * FROM Items WHERE Learnt = \"false\" LIMIT 1");
+                index = data.index;
+                return true;
+            }
+            
+            return false;
         }
         private void superMemo(int grade)
         {
